@@ -1,0 +1,1098 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GigaStore | Premium Shopping</title>
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
+        rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/stomp.js/2.3.3/stomp.min.js"></script>
+    <style>
+        :root {
+            --primary: #6366f1;
+            --primary-hover: #4f46e5;
+            --secondary: #ec4899;
+            --bg: #0f172a;
+            --surface: #1e293b;
+            --surface-hover: #334155;
+            --text: #f8fafc;
+            --text-muted: #94a3b8;
+            --success: #10b981;
+            --error: #ef4444;
+            --warning: #f59e0b;
+            --glass: rgba(30, 41, 59, 0.7);
+            --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Inter', sans-serif;
+        }
+
+        body {
+            background-color: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            overflow-x: hidden;
+            background-image: radial-gradient(circle at 0% 0%, rgba(99, 102, 241, 0.15) 0, transparent 50%),
+                radial-gradient(circle at 100% 100%, rgba(236, 72, 153, 0.1) 0, transparent 50%);
+        }
+
+        /* Animations */
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .fade-in {
+            animation: fadeIn 0.5s ease-out forwards;
+        }
+
+        /* Navbar */
+        nav {
+            background: var(--glass);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            padding: 1rem 4rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+        }
+
+        .logo {
+            font-size: 1.6rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+            letter-spacing: -1px;
+            text-decoration: none;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 2rem;
+            align-items: center;
+        }
+
+        .nav-links a {
+            color: var(--text-muted);
+            text-decoration: none;
+            font-weight: 500;
+            font-size: 0.95rem;
+            transition: var(--transition);
+            cursor: pointer;
+            position: relative;
+        }
+
+        .nav-links a:hover,
+        .nav-links a.active {
+            color: var(--text);
+        }
+
+        .nav-links a.active::after {
+            content: '';
+            position: absolute;
+            bottom: -5px;
+            left: 0;
+            width: 100%;
+            height: 2px;
+            background: var(--primary);
+            border-radius: 2px;
+        }
+
+        /* Container */
+        .container {
+            max-width: 1200px;
+            margin: 2rem auto;
+            padding: 0 1rem;
+        }
+
+        /* Festival Banner */
+        .festival-banner {
+            background: linear-gradient(135deg, #4f46e5, #ec4899);
+            padding: 3rem;
+            border-radius: 2rem;
+            margin-bottom: 3rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 25px 50px -12px rgba(99, 102, 241, 0.4);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .festival-banner svg {
+            position: absolute;
+            right: -50px;
+            bottom: -50px;
+            opacity: 0.1;
+            width: 300px;
+            height: 300px;
+        }
+
+        .festival-content h2 {
+            font-size: 3rem;
+            font-weight: 900;
+            margin-bottom: 0.5rem;
+            letter-spacing: -1px;
+        }
+
+        .festival-content p {
+            font-size: 1.25rem;
+            opacity: 0.9;
+            font-weight: 500;
+        }
+
+        /* Product Grid */
+        .product-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 2.5rem;
+        }
+
+        .product-card {
+            background: var(--surface);
+            border-radius: 1.5rem;
+            overflow: hidden;
+            transition: var(--transition);
+            border: 1px solid rgba(255, 255, 255, 0.03);
+            display: flex;
+            flex-direction: column;
+            position: relative;
+        }
+
+        .product-card:hover {
+            transform: translateY(-10px);
+            border-color: rgba(99, 102, 241, 0.3);
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3);
+        }
+
+        .product-image {
+            height: 240px;
+            width: 100%;
+            object-fit: cover;
+            transition: var(--transition);
+        }
+
+        .product-card:hover .product-image {
+            transform: scale(1.05);
+        }
+
+        .product-info {
+            padding: 1.5rem;
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .product-category {
+            font-size: 0.7rem;
+            color: var(--secondary);
+            font-weight: 800;
+            text-transform: uppercase;
+            margin-bottom: 0.5rem;
+            letter-spacing: 1px;
+        }
+
+        .product-name {
+            font-size: 1.25rem;
+            font-weight: 700;
+            margin-bottom: 0.75rem;
+            color: var(--text);
+        }
+
+        .product-desc {
+            font-size: 0.9rem;
+            color: var(--text-muted);
+            line-height: 1.6;
+            margin-bottom: 1.5rem;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+
+        .product-footer {
+            margin-top: auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .product-price {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .original-price {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            text-decoration: line-through;
+        }
+
+        .current-price {
+            font-size: 1.4rem;
+            font-weight: 800;
+            color: var(--text);
+        }
+
+        .offer-badge {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            background: var(--secondary);
+            color: white;
+            padding: 0.4rem 1rem;
+            border-radius: 2rem;
+            font-size: 0.75rem;
+            font-weight: 900;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3);
+            z-index: 10;
+        }
+
+        /* Buttons */
+        .btn {
+            background: var(--primary);
+            color: white;
+            padding: 0.8rem 1.5rem;
+            border-radius: 1rem;
+            border: none;
+            font-weight: 700;
+            cursor: pointer;
+            transition: var(--transition);
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            font-size: 0.9rem;
+        }
+
+        .btn:hover {
+            background: var(--primary-hover);
+            transform: scale(1.02);
+        }
+
+        .btn-outline {
+            background: transparent;
+            border: 2px solid var(--surface-hover);
+            color: var(--text);
+        }
+
+        .btn-outline:hover {
+            background: var(--surface-hover);
+        }
+
+        .btn-red {
+            background: var(--error);
+        }
+
+        .btn-red:hover {
+            background: #dc2626;
+        }
+
+        /* Auth/Login UI */
+        #auth-panel,
+        #user-dashboard {
+            background: var(--surface);
+            padding: 3rem;
+            border-radius: 2rem;
+            max-width: 450px;
+            margin: 4rem auto;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.6);
+            display: none;
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 0.6rem;
+            color: var(--text-muted);
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+
+        .form-group input,
+        .form-group textarea {
+            width: 100%;
+            padding: 1rem;
+            background: var(--bg);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 1rem;
+            color: var(--text);
+            font-size: 0.95rem;
+            transition: var(--transition);
+        }
+
+        .form-group input:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.15);
+        }
+
+        /* Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 2000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.85);
+            backdrop-filter: blur(10px);
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-content {
+            background: var(--surface);
+            padding: 3rem;
+            width: 95%;
+            max-width: 600px;
+            border-radius: 2rem;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            position: relative;
+            animation: fadeIn 0.4s ease;
+        }
+
+        .close {
+            position: absolute;
+            top: 1.5rem;
+            right: 1.5rem;
+            color: var(--text-muted);
+            cursor: pointer;
+            font-size: 2rem;
+        }
+
+        /* Cart/Order List */
+        .list-container {
+            background: var(--surface);
+            padding: 2rem;
+            border-radius: 2rem;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .item-card {
+            background: var(--bg);
+            padding: 1.5rem;
+            border-radius: 1.5rem;
+            margin-bottom: 1rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border: 1px solid rgba(255, 255, 255, 0.03);
+            transition: var(--transition);
+        }
+
+        .item-card:hover {
+            border-color: var(--primary);
+        }
+
+        /* Status Pills */
+        .status-pill {
+            padding: 0.4rem 1rem;
+            border-radius: 2rem;
+            font-size: 0.7rem;
+            font-weight: 800;
+            text-transform: uppercase;
+        }
+
+        .status-PLACED {
+            background: rgba(59, 130, 246, 0.1);
+            color: #3b82f6;
+            border: 1px solid #3b82f6;
+        }
+
+        .status-PROCESSING {
+            background: rgba(245, 158, 11, 0.1);
+            color: #f59e0b;
+            border: 1px solid #f59e0b;
+        }
+
+        .status-DELIVERED {
+            background: rgba(16, 185, 129, 0.1);
+            color: #10b981;
+            border: 1px solid #10b981;
+        }
+
+        .status-CANCELLED {
+            background: rgba(239, 68, 68, 0.1);
+            color: #ef4444;
+            border: 1px solid #ef4444;
+        }
+
+        #toast {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            background: var(--primary);
+            color: white;
+            padding: 1.25rem 2rem;
+            border-radius: 1.25rem;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+            display: none;
+            z-index: 3000;
+            font-weight: 700;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .tab-content {
+            display: none;
+            opacity: 0;
+            transform: translateY(10px);
+            transition: var(--transition);
+        }
+
+        .tab-content.active-tab {
+            display: block;
+            opacity: 1;
+            transform: translateY(0);
+        }
+    </style>
+</head>
+
+<body>
+
+    <nav>
+        <a href="#" class="logo">GigaStore</a>
+        <div class="nav-links" id="main-nav">
+            <a onclick="switchTab('store')" id="tab-store" class="active">Store</a>
+            <a onclick="switchTab('cart')" id="tab-cart">Cart (<span id="cart-count">0</span>)</a>
+            <a onclick="switchTab('orders')" id="tab-orders">Orders</a>
+            <a onclick="switchTab('feedback')" id="tab-feedback">Feedback</a>
+            <a onclick="showProfile()" id="tab-profile">Profile</a>
+            <a onclick="showProfile()" id="nav-user" style="color: var(--primary); font-weight: 800;">Login</a>
+        </div>
+    </nav>
+
+    <div class="container">
+        <!-- Store Tab -->
+        <div id="store-tab" class="tab-content active-tab">
+            <div class="festival-banner fade-in">
+                <div class="festival-content">
+                    <h2>Premium Sale</h2>
+                    <p>Flat 40% OFF on all Festive Electronics! ✨</p>
+                    <br>
+                    <button class="btn"
+                        onclick="document.querySelector('.product-grid').scrollIntoView({behavior:'smooth'})">Shop
+                        Now</button>
+                </div>
+                <svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+                    <path fill="#FFF"
+                        d="M40.3,-68.8C52.7,-63.9,63.6,-53.4,71.5,-40.8C79.4,-28.1,84.3,-13.4,83.4,1C82.4,15.4,75.7,29.3,67.1,41.9C58.4,54.4,47.8,65.6,34.9,71.6C22.1,77.7,7,78.5,-8,77.1C-23.1,75.7,-38.2,72.1,-50.9,64.2C-63.6,56.3,-74.1,44.2,-79.8,30.3C-85.5,16.5,-86.5,0.8,-82.7,-13.4C-78.9,-27.6,-70.4,-40.4,-59.5,-47.1C-48.6,-53.8,-35.3,-54.6,-24.1,-60.7C-12.8,-66.8,-3.7,-78.3,9.5,-80C22.6,-81.7,35.2,-73.6,40.3,-68.8Z"
+                        transform="translate(100 100)" />
+                </svg>
+            </div>
+
+            <div class="product-grid" id="product-list">
+                <!-- Products loaded via JS -->
+            </div>
+        </div>
+
+        <!-- Cart Tab -->
+        <div id="cart-tab" class="tab-content">
+            <h2 style="font-size: 2rem; margin-bottom: 2rem;">Your Luxury Cart</h2>
+            <div class="list-container">
+                <div id="cart-list"></div>
+                <hr style="opacity:0.1; margin: 2rem 0;">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <div>
+                        <p style="color: var(--text-muted); font-size: 1rem;">Total Est. Amount</p>
+                        <h3 id="cart-total" style="font-size: 2.5rem; font-weight: 800;">₹0.00</h3>
+                    </div>
+                    <button class="btn" style="padding: 1.25rem 3rem; font-size: 1.1rem;"
+                        onclick="showCheckout()">Proceed to Checkout</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Orders Tab -->
+        <div id="orders-tab" class="tab-content">
+            <h2 style="font-size: 2rem; margin-bottom: 2rem;">Track Your Orders</h2>
+            <div id="order-list"></div>
+        </div>
+
+        <!-- Feedback Tab -->
+        <div id="feedback-tab" class="tab-content">
+            <div style="display: flex; gap: 4rem;">
+                <div style="flex: 1;">
+                    <h2 style="font-size: 2rem; margin-bottom: 2rem;">Service Feedback</h2>
+                    <div id="feedback-list"></div>
+                </div>
+                <div style="width: 400px; background: var(--surface); padding: 2.5rem; border-radius: 2rem;">
+                    <h3 style="margin-bottom: 1.5rem;">Share Your Experience</h3>
+                    <div class="form-group">
+                        <label>Rating (1-5)</label>
+                        <input type="number" id="feed-rating" min="1" max="5" value="5">
+                    </div>
+                    <div class="form-group">
+                        <label>Comment</label>
+                        <textarea id="feed-content"
+                            style="width:100%; height: 120px; background: var(--bg); border: none; border-radius: 1rem; color: white; padding: 1rem;"
+                            placeholder="How was our service?"></textarea>
+                    </div>
+                    <button class="btn" style="width: 100%;" onclick="submitFeedback()">Submit Review</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Profile Tab -->
+        <div id="profile-tab" class="tab-content">
+            <h2 style="font-size: 2rem; margin-bottom: 2rem;">User Profile</h2>
+            <div class="list-container" style="max-width: 600px; margin: 0 auto;">
+                <div class="form-group"><label>Full Name</label><input type="text" id="prof-name"></div>
+                <div class="form-group"><label>Username</label><input type="text" id="prof-user" disabled
+                        style="opacity: 0.5;"></div>
+                <div class="form-group"><label>Email</label><input type="email" id="prof-email"></div>
+                <div class="form-group"><label>Phone</label><input type="text" id="prof-phone"></div>
+                <div class="form-group"><label>Address</label><textarea id="prof-address"
+                        style="width:100%; background:var(--bg); color:white; border:none; border-radius:1rem; padding:1rem;"></textarea>
+                </div>
+                <button class="btn" style="width: 100%; margin-top: 1rem;" onclick="updateUserProfile()">Save
+                    Changes</button>
+                <button class="btn btn-red" style="width: 100%; margin-top: 1rem; background: #ef4444;"
+                    onclick="logout()">Logout Account</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modals -->
+    <div id="auth-modal" class="modal">
+        <div id="auth-panel" style="display: block;">
+            <h2 id="auth-title" style="margin-bottom: 2rem; text-align: center;">Welcome Back</h2>
+            <div id="mfa-section" style="display:none">
+                <div class="form-group">
+                    <label>Enter 6-digit OTP</label>
+                    <input type="text" id="otp" placeholder="XXXXXX"
+                        style="text-align: center; letter-spacing: 12px; font-size: 1.5rem;">
+                </div>
+                <button class="btn" style="width: 100%;" onclick="verifyMfa()">Verify OTP</button>
+            </div>
+            <div id="login-section">
+                <div class="form-group">
+                    <label>Username</label>
+                    <input type="text" id="username" placeholder="Enter username">
+                </div>
+                <div class="form-group">
+                    <label>Password</label>
+                    <input type="password" id="password" placeholder="••••••••">
+                </div>
+                <button class="btn" style="width: 100%;" onclick="login()">Sign In</button>
+                <p style="text-align: center; margin-top: 1.5rem; font-size: 0.9rem; color: var(--text-muted);">
+                    Don't have an account? <a onclick="toggleAuth(false)"
+                        style="color: var(--primary); font-weight:700; cursor:pointer">Sign Up</a>
+                </p>
+            </div>
+            <div id="register-section" style="display:none">
+                <div class="form-group"><label>Full Name</label><input type="text" id="reg-name"></div>
+                <div class="form-group"><label>Username</label><input type="text" id="reg-user"></div>
+                <div class="form-group"><label>Email</label><input type="email" id="reg-email"></div>
+                <div class="form-group"><label>Password</label><input type="password" id="reg-pass"></div>
+                <button class="btn" style="width: 100%;" onclick="register()">Create Account</button>
+                <p style="text-align: center; margin-top: 1.5rem; font-size: 0.9rem; color: var(--text-muted);">
+                    Already a member? <a onclick="toggleAuth(true)"
+                        style="color: var(--primary); font-weight:700; cursor:pointer">Login</a>
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <div id="checkout-modal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModals()">&times;</span>
+            <h2 style="margin-bottom: 2rem;">Checkout Details</h2>
+            <div class="form-group">
+                <label>Shipping Address</label>
+                <textarea id="shipAddress"
+                    style="width:100%; height: 80px; background: var(--bg); border: none; border-radius: 1rem; color: white; padding: 1rem;"></textarea>
+            </div>
+            <p style="margin-bottom: 2rem; color: var(--text-muted);">Payment method: UPI / Personal QR</p>
+            <button class="btn" style="width: 100%; font-size: 1.1rem;" onclick="initiateOrder()">Place Order &
+                Pay</button>
+        </div>
+    </div>
+
+    <div id="payment-modal" class="modal">
+        <div class="modal-content" style="max-width: 450px;">
+            <h2 style="margin-bottom: 1rem; text-align: center;">Secure Payment</h2>
+            <div id="payment-details" style="text-align: center;">
+                <p id="pay-status-text"
+                    style="color: var(--secondary); font-weight: 800; font-size: 0.9rem; margin-bottom: 1.5rem; text-transform: uppercase;">
+                </p>
+                <div
+                    style="background: white; padding: 1.5rem; border-radius: 2rem; display: inline-block; margin-bottom: 1.5rem;">
+                    <img id="qr-image" style="width: 250px; height: 250px;">
+                </div>
+                <div style="margin-bottom: 2rem;">
+                    <p style="color: var(--text-muted); font-size: 0.9rem;">Paying to: <span id="admin-vpa-disp"
+                            style="color: var(--text); font-weight: 700;"></span></p>
+                    <h3 id="pay-amount-disp" style="font-size: 2.5rem; font-weight: 800;"></h3>
+                </div>
+
+                <div style="background: var(--bg); padding: 1.5rem; border-radius: 1.5rem; text-align: left;">
+                    <label style="color: var(--text-muted); margin-bottom: 0.5rem; display: block;">Enter Transaction ID
+                        (UTR)</label>
+                    <input type="text" id="vpa" placeholder="Example: 4032XXXXXXXX" style="margin-bottom: 1rem;">
+                    <button class="btn" style="width: 100%;" onclick="processPayment()">Submit Verification</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="toast"></div>
+
+    <script>
+        let cart = [];
+        let currentUser = null;
+        let currentOrderId = null;
+        let stompClient = null;
+        let selectedPaymentMethod = "UPI";
+
+        async function init() {
+            loadProducts();
+            checkSession();
+            initWebSocket();
+        }
+
+        async function checkSession() {
+            const userJson = localStorage.getItem('user');
+            if (userJson) {
+                const data = JSON.parse(userJson);
+                currentUser = data.user || data;
+                updateUIForUser();
+            } else {
+                showAuthModal();
+            }
+        }
+
+        async function updateUserProfile() {
+            const payload = {
+                username: currentUser.username,
+                fullName: document.getElementById('prof-name').value,
+                email: document.getElementById('prof-email').value,
+                phone: document.getElementById('prof-phone').value,
+                address: document.getElementById('prof-address').value
+            };
+
+            const res = await fetch('/api/users/profile', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+
+            if (res.ok) {
+                const updatedUser = await res.json();
+                currentUser = updatedUser;
+                localStorage.setItem('user', JSON.stringify(currentUser));
+                showToast("Profile updated successfully!");
+                updateUIForUser();
+            } else {
+                showToast("Failed to update profile");
+            }
+        }
+
+        function showProfile() {
+            if (!currentUser) showAuthModal();
+            else switchTab('profile');
+        }
+
+        function logout() {
+            if (confirm("Are you sure you want to logout?")) {
+                localStorage.removeItem('user');
+                location.reload();
+            }
+        }
+
+        function showAuthModal() {
+            document.getElementById('auth-modal').style.display = 'flex';
+        }
+
+        function toggleAuth(isLogin) {
+            document.getElementById('login-section').style.display = isLogin ? 'block' : 'none';
+            document.getElementById('register-section').style.display = isLogin ? 'none' : 'block';
+            document.getElementById('auth-title').innerText = isLogin ? 'Welcome Back' : 'Create Account';
+        }
+
+        async function register() {
+            const user = {
+                fullName: document.getElementById('reg-name').value,
+                username: document.getElementById('reg-user').value,
+                email: document.getElementById('reg-email').value,
+                password: document.getElementById('reg-pass').value
+            };
+            const res = await fetch('/api/auth/register', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(user)
+            });
+            if (res.ok) {
+                showToast("Account created! Please login.");
+                toggleAuth(true);
+            } else {
+                const err = await res.json();
+                alert(err.message || "Registration failed");
+            }
+        }
+
+        async function login() {
+            const user = {
+                username: document.getElementById('username').value,
+                password: document.getElementById('password').value
+            };
+            const res = await fetch('/api/auth/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(user)
+            });
+            if (res.ok) {
+                const data = await res.json();
+                if (data.mfaRequired) {
+                    document.getElementById('login-section').style.display = 'none';
+                    document.getElementById('mfa-section').style.display = 'block';
+                    showToast("OTP sent to " + (data.phone || "your phone"));
+                } else {
+                    completeLogin(data);
+                }
+            } else {
+                alert("Invalid credentials");
+            }
+        }
+
+        async function verifyMfa() {
+            const otp = document.getElementById('otp').value;
+            const res = await fetch(`/api/auth/mfa/verify?username=${document.getElementById('username').value}&otp=${otp}`, { method: 'POST' });
+            if (res.ok) {
+                const user = await res.json();
+                completeLogin(user);
+            } else {
+                alert("Invalid OTP");
+            }
+        }
+
+        function completeLogin(data) {
+            // Fix: Auth response contains user object inside 'user' key
+            currentUser = data.user || data;
+            localStorage.setItem('user', JSON.stringify(currentUser));
+            document.getElementById('auth-modal').style.display = 'none';
+            updateUIForUser();
+            showToast("Welcome, " + currentUser.fullName);
+        }
+
+        function updateUIForUser() {
+            if (!currentUser) return;
+            document.getElementById('nav-user').innerText = currentUser.username.toUpperCase();
+            if (currentUser.address) document.getElementById('shipAddress').value = currentUser.address;
+
+            // Fill profile fields
+            document.getElementById('prof-name').value = currentUser.fullName || 'N/A';
+            document.getElementById('prof-user').value = currentUser.username || 'N/A';
+            document.getElementById('prof-email').value = currentUser.email || 'N/A';
+            document.getElementById('prof-phone').value = currentUser.phone || 'N/A';
+            document.getElementById('prof-address').value = currentUser.address || 'N/A';
+        }
+
+        function switchTab(tabId) {
+            // Hide all tabs
+            document.querySelectorAll('.tab-content').forEach(t => {
+                t.classList.remove('active-tab');
+                t.style.display = 'none';
+            });
+
+            // Remove active from all links
+            document.querySelectorAll('.nav-links a').forEach(a => a.classList.remove('active'));
+
+            // Show selected tab
+            const targetTab = document.getElementById(tabId + '-tab');
+            if (targetTab) {
+                targetTab.style.display = 'block';
+                // Trigger reflow for animation
+                targetTab.offsetHeight;
+                targetTab.classList.add('active-tab');
+            }
+
+            // Active the link
+            const targetLink = document.getElementById('tab-' + tabId);
+            if (targetLink) targetLink.classList.add('active');
+
+            if (tabId === 'orders') loadOrders();
+            if (tabId === 'feedback') loadFeedbacks();
+
+            trackActivity("VIEW_PAGE", "Visited " + tabId.toUpperCase() + " tab");
+        }
+
+        async function loadProducts() {
+            const res = await fetch('/api/products');
+            const products = await res.json();
+            document.getElementById('product-list').innerHTML = products.map(p => {
+                const hasOffer = p.isOnSale;
+                const displayPrice = hasOffer ? p.discountPrice : p.price;
+
+                return `
+                <div class="product-card fade-in">
+                    ${hasOffer ? `<div class="offer-badge">SALE</div>` : ''}
+                    <img src="${p.imageUrl}" class="product-image" onerror="this.src='https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=400'">
+                    <div class="product-info">
+                        <div class="product-category">${p.category}</div>
+                        <h3 class="product-name">${p.name}</h3>
+                        <p class="product-desc">${p.description}</p>
+                        <div class="product-footer">
+                            <div class="product-price">
+                                ${hasOffer ? `<span class="original-price">₹${p.price.toFixed(2)}</span>` : ''}
+                                <span class="current-price">₹${displayPrice.toFixed(2)}</span>
+                            </div>
+                            <button class="btn" onclick="addToCart('${p.name}', ${displayPrice})">
+                                Add to Cart
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `}).join('');
+        }
+
+        function addToCart(name, price) {
+            const item = cart.find(i => i.name === name);
+            if (item) item.quantity++;
+            else cart.push({ name, price, quantity: 1 });
+            updateCartUI();
+            showToast(`${name} added to cart`);
+            trackActivity("ADD_TO_CART", `Added ${name} to cart`);
+        }
+
+        function updateCartUI() {
+            document.getElementById('cart-count').innerText = cart.reduce((s, i) => s + i.quantity, 0);
+            document.getElementById('cart-list').innerHTML = cart.map((i, idx) => `
+                <div class="item-card">
+                    <div>
+                        <h4 style="font-weight:700">${i.name}</h4>
+                        <p style="color:var(--text-muted); font-size:0.8rem">₹${i.price.toFixed(2)} x ${i.quantity}</p>
+                    </div>
+                    <div style="display:flex; align-items:center; gap:1rem">
+                        <span style="font-weight:900">₹${(i.price * i.quantity).toFixed(2)}</span>
+                        <button class="btn btn-red" style="padding:0.5rem 1rem" onclick="removeFromCart(${idx})">×</button>
+                    </div>
+                </div>
+            `).join('');
+            document.getElementById('cart-total').innerText = "₹" + cart.reduce((s, i) => s + (i.price * i.quantity), 0).toFixed(2);
+        }
+
+        function removeFromCart(idx) {
+            cart.splice(idx, 1);
+            updateCartUI();
+        }
+
+        function showCheckout() {
+            if (cart.length === 0) return alert("Cart is empty");
+            document.getElementById('checkout-modal').style.display = 'flex';
+        }
+
+        async function initiateOrder() {
+            const total = cart.reduce((s, i) => s + (i.price * i.quantity), 0);
+            const order = {
+                customerName: currentUser.username,
+                address: document.getElementById('shipAddress').value,
+                phone: currentUser.phone || "N/A",
+                totalAmount: total,
+                totalQuantity: cart.reduce((s, i) => s + i.quantity, 0),
+                productSummary: cart.map(i => `${i.name} (x${i.quantity})`).join(", ")
+            };
+
+            const res = await fetch('/api/orders/place', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(order)
+            });
+
+            if (res.ok) {
+                const placed = await res.json();
+                currentOrderId = placed.orderId;
+                document.getElementById('checkout-modal').style.display = 'none';
+                showPayment(total);
+            }
+        }
+
+        let adminVpa = "";
+        async function showPayment(amount) {
+            if (!adminVpa) {
+                const res = await fetch('/api/config/vpa');
+                const data = await res.json();
+                adminVpa = data.vpa;
+            }
+
+            const upiLink = `upi://pay?pa=${adminVpa}&pn=GigaStore&am=${amount}&tn=Order-${currentOrderId}&cu=INR`;
+            const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(upiLink)}`;
+
+            document.getElementById('qr-image').src = qrUrl;
+            document.getElementById('pay-amount-disp').innerText = "₹" + amount.toFixed(2);
+            document.getElementById('admin-vpa-disp').innerText = adminVpa;
+            document.getElementById('pay-status-text').innerText = "Scan to Pay Securely";
+            document.getElementById('payment-modal').style.display = 'flex';
+        }
+
+        async function processPayment() {
+            const utr = document.getElementById('vpa').value;
+            if (!utr) return alert("Please enter the UTR ID from your app.");
+
+            const res = await fetch(`/api/payment/process`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    orderId: currentOrderId,
+                    method: 'UPI',
+                    vpa: adminVpa,
+                    transactionId: utr
+                })
+            });
+
+            if (res.ok) {
+                const updated = await res.json();
+                if (updated.paymentStatus === 'PAID') {
+                    cart = [];
+                    updateCartUI();
+                    document.getElementById('payment-modal').style.display = 'none';
+                    showToast("✅ Payment Verified & Order Placed!");
+                    switchTab('orders');
+                }
+            } else {
+                alert("Verification failed. Please check UTR.");
+            }
+        }
+
+        async function loadOrders() {
+            if (!currentUser) return showAuthModal();
+            const res = await fetch('/api/orders');
+            const orders = await res.json();
+            const myOrders = orders.filter(o => o.customerName === currentUser.username);
+
+            document.getElementById('order-list').innerHTML = myOrders.reverse().map(o => `
+                <div class="list-container" style="margin-bottom: 2rem;">
+                    <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+                        <div>
+                            <h3 style="margin-bottom:0.5rem">Order #${o.orderId}</h3>
+                            <p style="color:var(--text-muted); font-size:0.9rem">${o.productSummary}</p>
+                        </div>
+                        <span class="status-pill status-${o.status}">${o.status}</span>
+                    </div>
+                    <div style="margin-top:1.5rem; display:flex; gap:2rem;">
+                        <div>
+                            <p style="color:var(--text-muted); font-size:0.8rem">Payment</p>
+                            <p style="font-weight:700; color:${o.paymentStatus === 'PAID' ? 'var(--success)' : (o.paymentStatus === 'REFUNDED' ? 'var(--warning)' : 'var(--text)')}">${o.paymentStatus}</p>
+                        </div>
+                        <div>
+                            <p style="color:var(--text-muted); font-size:0.8rem">Total</p>
+                            <p style="font-weight:700">₹${o.totalAmount.toFixed(2)}</p>
+                        </div>
+                        ${o.refundTransactionId ? `
+                        <div>
+                            <p style="color:var(--warning); font-size:0.8rem">Refund UTR</p>
+                            <p style="font-weight:700; font-family:monospace">${o.refundTransactionId}</p>
+                        </div>
+                        ` : ''}
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        async function loadFeedbacks() {
+            const res = await fetch('/api/feedbacks');
+            const feeds = await res.json();
+            document.getElementById('feedback-list').innerHTML = feeds.reverse().map(f => `
+                <div class="feedback-item fade-in">
+                    <div class="rating-stars">${'★'.repeat(f.rating)}${'☆'.repeat(5 - f.rating)}</div>
+                    <p style="margin-bottom:0.5rem; font-weight:600;">${f.username}</p>
+                    <p style="color:var(--text-muted); line-height:1.5">${f.content}</p>
+                </div>
+            `).join('');
+        }
+
+        async function submitFeedback() {
+            if (!currentUser) return showAuthModal();
+            const feedback = {
+                username: currentUser.username,
+                content: document.getElementById('feed-content').value,
+                rating: document.getElementById('feed-rating').value
+            };
+            const res = await fetch('/api/feedbacks', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(feedback)
+            });
+            if (res.ok) {
+                showToast("Thank you for your feedback!");
+                document.getElementById('feed-content').value = "";
+                loadFeedbacks();
+            }
+        }
+
+        function closeModals() {
+            document.querySelectorAll('.modal').forEach(m => m.style.display = 'none');
+        }
+
+        function showToast(msg) {
+            const t = document.getElementById('toast');
+            t.innerText = msg;
+            t.style.display = 'block';
+            setTimeout(() => t.style.display = 'none', 4000);
+        }
+
+        function initWebSocket() {
+            const socket = new SockJS('/ws');
+            stompClient = Stomp.over(socket);
+            stompClient.debug = null;
+            stompClient.connect({}, () => {
+                console.log("WebSocket connected");
+                stompClient.subscribe('/topic/orders', (msg) => {
+                    const order = JSON.parse(msg.body);
+                    if (currentUser && order.customerName === currentUser.username) {
+                        showToast(`Update: Order #${order.orderId} is now ${order.status}`);
+                        loadOrders();
+                    }
+                });
+
+                // Track initial presence if user is logged in
+                if (currentUser) {
+                    trackActivity("ONLINE", "User session restored");
+                }
+            });
+        }
+
+        function trackActivity(action, details) {
+            if (!stompClient || !stompClient.connected) return;
+
+            const activity = {
+                username: currentUser ? currentUser.username : "Guest",
+                action: action,
+                details: details
+            };
+
+            stompClient.send("/app/activity.track", {}, JSON.stringify(activity));
+        }
+
+        init();
+    </script>
+</body>
+
+</html>

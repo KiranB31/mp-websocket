@@ -1,0 +1,876 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GigaStore | Luxury Admin Dashboard</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
+        rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/stomp.js/2.3.3/stomp.min.js"></script>
+    <style>
+        :root {
+            --primary: #6366f1;
+            --primary-hover: #4f46e5;
+            --secondary: #ec4899;
+            --bg: #0b0f19;
+            --surface: #161d2f;
+            --surface-hover: #1e293b;
+            --text: #f8fafc;
+            --text-muted: #94a3b8;
+            --success: #10b981;
+            --error: #ef4444;
+            --warning: #f59e0b;
+            --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Inter', sans-serif;
+        }
+
+        body {
+            background-color: var(--bg);
+            color: var(--text);
+            display: flex;
+            min-height: 100vh;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            width: 280px;
+            background: var(--surface);
+            border-right: 1px solid rgba(255, 255, 255, 0.05);
+            padding: 2rem;
+            display: flex;
+            flex-direction: column;
+            gap: 2rem;
+        }
+
+        .logo {
+            font-size: 1.5rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .sidebar-menu {
+            list-style: none;
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .sidebar-menu li {
+            padding: 1rem 1.5rem;
+            border-radius: 1rem;
+            cursor: pointer;
+            transition: var(--transition);
+            color: var(--text-muted);
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .sidebar-menu li:hover {
+            background: var(--surface-hover);
+            color: var(--text);
+        }
+
+        .sidebar-menu li.active {
+            background: var(--primary);
+            color: white;
+        }
+
+        /* Main Content */
+        .main {
+            flex-grow: 1;
+            padding: 3rem;
+            overflow-y: auto;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 3rem;
+        }
+
+        .header h1 {
+            font-size: 2rem;
+            font-weight: 800;
+            letter-spacing: -0.5px;
+        }
+
+        /* Stats Grid */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 2rem;
+            margin-bottom: 4rem;
+        }
+
+        .stat-card {
+            background: var(--surface);
+            padding: 2rem;
+            border-radius: 1.5rem;
+            border: 1px solid rgba(255, 255, 255, 0.03);
+        }
+
+        .stat-label {
+            color: var(--text-muted);
+            font-size: 0.85rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .stat-value {
+            font-size: 1.8rem;
+            font-weight: 800;
+        }
+
+        /* Table Style */
+        .table-container {
+            background: var(--surface);
+            border-radius: 1.5rem;
+            overflow: hidden;
+            border: 1px solid rgba(255, 255, 255, 0.03);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th {
+            background: rgba(0, 0, 0, 0.2);
+            text-align: left;
+            padding: 1.25rem 2rem;
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        td {
+            padding: 1.25rem 2rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+            font-size: 0.9rem;
+        }
+
+        tr:hover {
+            background: rgba(255, 255, 255, 0.02);
+        }
+
+        /* Modals & Forms */
+        .btn {
+            padding: 0.75rem 1.5rem;
+            border-radius: 0.75rem;
+            border: none;
+            font-weight: 700;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: var(--primary-hover);
+            transform: translateY(-1px);
+        }
+
+        .btn-red {
+            background: rgba(239, 68, 68, 0.1);
+            color: var(--error);
+            border: 1px solid rgba(239, 68, 68, 0.2);
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 2000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(8px);
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-content {
+            background: var(--surface);
+            padding: 3rem;
+            width: 500px;
+            border-radius: 2rem;
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            color: var(--text-muted);
+            font-size: 0.85rem;
+        }
+
+        .form-group input,
+        .form-group textarea,
+        .form-group select {
+            width: 100%;
+            padding: 0.85rem;
+            background: var(--bg);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 0.75rem;
+            color: white;
+        }
+
+        .status-pill {
+            padding: 0.35rem 0.85rem;
+            border-radius: 2rem;
+            font-size: 0.7rem;
+            font-weight: 800;
+            text-transform: uppercase;
+        }
+
+        .status-PLACED {
+            background: rgba(59, 130, 246, 0.1);
+            color: #3b82f6;
+            border: 1px solid #3b82f6;
+        }
+
+        .status-PROCESSING {
+            background: rgba(245, 158, 11, 0.1);
+            color: #f59e0b;
+            border: 1px solid #f59e0b;
+        }
+
+        .status-DELIVERED {
+            background: rgba(16, 185, 129, 0.1);
+            color: #10b981;
+            border: 1px solid #10b981;
+        }
+
+        .status-CANCELLED {
+            background: rgba(239, 68, 68, 0.1);
+            color: #ef4444;
+            border: 1px solid #ef4444;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .active-tab {
+            display: block;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="sidebar">
+        <div class="logo">GigaStore Admin</div>
+        <ul class="sidebar-menu">
+            <li class="active" onclick="switchTab('orders', this)">Orders</li>
+            <li onclick="switchTab('products', this)">Products</li>
+            <li onclick="switchTab('users', this)">Users</li>
+            <li onclick="switchTab('feedback', this)">Feedback</li>
+            <li onclick="switchTab('activity', this)">Live Activity</li>
+            <li onclick="switchTab('profile', this)" id="nav-profile">Profile</li>
+            <li onclick="logout()"
+                style="color: var(--error); margin-top: 1rem; border-top: 1px solid rgba(255,255,255,0.05); border-radius: 0;">
+                Logout</li>
+        </ul>
+        <div style="margin-top:auto; padding: 2rem; background: var(--bg); border-radius: 1.5rem;">
+            <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.5rem;">UPI Configuration</p>
+            <p id="admin-vpa-disp" style="font-weight: 700; font-family: monospace; font-size: 0.8rem;"></p>
+        </div>
+    </div>
+
+    <div class="main">
+        <div class="header">
+            <h1 id="tab-title">Orders Management</h1>
+            <div id="action-header"></div>
+        </div>
+
+        <!-- Orders Tab -->
+        <div id="orders-tab" class="tab-content active-tab">
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-label">Total Revenue</div>
+                    <div class="stat-value" id="stat-revenue">₹0</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Active Orders</div>
+                    <div class="stat-value" id="stat-orders">0</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Completed</div>
+                    <div class="stat-value" id="stat-done">0</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Canceled</div>
+                    <div class="stat-value" id="stat-bad">0</div>
+                </div>
+            </div>
+            <div id="live-activity-card"
+                style="background: var(--surface); padding: 1.5rem; border-radius: 1.5rem; margin-bottom: 2rem; border: 1px solid var(--primary); display: none;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                    <h3 style="font-size: 1rem; color: var(--primary);">Live Activity Track</h3>
+                    <span id="live-status"
+                        style="font-size: 0.7rem; background: var(--success); color: white; padding: 2px 8px; border-radius: 10px;">LIVE</span>
+                </div>
+                <div id="live-updates"
+                    style="font-size: 0.85rem; max-height: 100px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px;">
+                    <p style="color: var(--text-muted)">Waiting for user activity...</p>
+                </div>
+            </div>
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Order ID</th>
+                            <th>Customer</th>
+                            <th>Summary</th>
+                            <th>Amount</th>
+                            <th>Payment</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="order-table"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Products Tab -->
+        <div id="products-tab" class="tab-content">
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Image</th>
+                            <th>Name</th>
+                            <th>Category</th>
+                            <th>Price (₹)</th>
+                            <th>Sale Price (₹)</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="product-table"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Users Tab -->
+        <div id="users-tab" class="tab-content">
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Full Name</th>
+                            <th>Username</th>
+                            <th>Email</th>
+                            <th>Phone</th>
+                            <th>Role</th>
+                        </tr>
+                    </thead>
+                    <tbody id="user-table"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Feedback Tab -->
+        <div id="feedback-tab" class="tab-content">
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Rating</th>
+                            <th>User</th>
+                            <th>Comment</th>
+                            <th>Date</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="feedback-table"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Activity Tab -->
+        <div id="activity-tab" class="tab-content">
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Time</th>
+                            <th>User</th>
+                            <th>Action</th>
+                            <th>Details</th>
+                        </tr>
+                    </thead>
+                    <tbody id="activity-table"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Profile Tab -->
+        <div id="profile-tab" class="tab-content">
+            <div class="list-container"
+                style="max-width: 600px; margin: 0 auto; background: var(--surface); padding: 3rem; border-radius: 2rem;">
+                <h2 style="margin-bottom: 2rem; text-align: center;">Admin Profile</h2>
+                <div class="form-group"><label>Full Name</label><input type="text" id="prof-name"></div>
+                <div class="form-group"><label>Username</label><input type="text" id="prof-user" disabled
+                        style="opacity: 0.5;"></div>
+                <div class="form-group"><label>Email</label><input type="email" id="prof-email"></div>
+                <div class="form-group"><label>Phone</label><input type="text" id="prof-phone"></div>
+                <div class="form-group"><label>Address</label><textarea id="prof-address"
+                        style="width:100%; background:var(--bg); color:white; border:none; border-radius:1rem; padding:1rem;"></textarea>
+                </div>
+                <button class="btn btn-primary" style="width: 100%; margin-top: 1rem;"
+                    onclick="updateAdminProfile()">Update Information</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modals -->
+    <div id="product-modal" class="modal">
+        <div class="modal-content">
+            <h2 style="margin-bottom: 2rem;">Add Luxury Product</h2>
+            <div class="form-group"><label>Product Name</label><input type="text" id="prod-name"></div>
+            <div class="form-group"><label>Category</label><input type="text" id="prod-cat"></div>
+            <div class="form-group"><label>Price (₹)</label><input type="number" id="prod-price"></div>
+            <div style="display: flex; gap: 1rem; margin-bottom: 1.5rem;">
+                <div style="flex: 1;"><label>Discount Price</label><input type="number" id="prod-discount"></div>
+                <div style="display: flex; align-items: center; gap: 10px; padding-top: 1.5rem;">
+                    <input type="checkbox" id="prod-onsale" style="width: 20px; height: 20px;">
+                    <label style="margin-bottom: 0;">Festival Sale?</label>
+                </div>
+            </div>
+            <div class="form-group"><label>Image URL</label><input type="text" id="prod-img"></div>
+            <div class="form-group"><label>Description</label><textarea id="prod-desc"></textarea></div>
+            <div style="display: flex; gap: 1rem;">
+                <button class="btn btn-primary" style="flex: 1;" onclick="saveProduct()">Save Product</button>
+                <button class="btn" style="background: var(--bg);" onclick="closeModals()">Cancel</button>
+            </div>
+        </div>
+        <!-- Auth Modal -->
+        <div id="auth-modal" class="modal" style="display: flex;">
+            <div class="modal-content" style="width: 400px;">
+                <h2 id="auth-title" style="margin-bottom: 2rem; text-align: center;">Admin Access</h2>
+                <div id="login-section">
+                    <div class="form-group"><label>Username</label><input type="text" id="username"
+                            placeholder="Admin username"></div>
+                    <div class="form-group"><label>Password</label><input type="password" id="password"
+                            placeholder="••••••••"></div>
+                    <button class="btn btn-primary" style="width: 100%;" onclick="login()">Login to Dashboard</button>
+                    <p style="text-align: center; margin-top: 1.5rem; font-size: 0.85rem; color: var(--text-muted);">
+                        Need an account? <a href="#" onclick="toggleAuth(false)" style="color: var(--primary);">Create
+                            Admin Profile</a>
+                    </p>
+                </div>
+                <div id="register-section" style="display: none;">
+                    <div class="form-group"><label>Full Name</label><input type="text" id="reg-name"></div>
+                    <div class="form-group"><label>Username</label><input type="text" id="reg-user"></div>
+                    <div class="form-group"><label>Email</label><input type="email" id="reg-email"></div>
+                    <div class="form-group"><label>Password</label><input type="password" id="reg-pass"></div>
+                    <button class="btn btn-primary" style="width: 100%;" onclick="register()">Create Admin
+                        Account</button>
+                    <p style="text-align: center; margin-top: 1.5rem; font-size: 0.85rem; color: var(--text-muted);">
+                        Already have an account? <a href="#" onclick="toggleAuth(true)"
+                            style="color: var(--primary);">Login</a>
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <script>
+            let currentUser = null;
+
+            async function init() {
+                checkSession();
+                loadConfig();
+                initWebSocket();
+            }
+
+            function checkSession() {
+                const userJson = localStorage.getItem('admin_user');
+                if (userJson) {
+                    const data = JSON.parse(userJson);
+                    currentUser = data.user || data;
+                    document.getElementById('auth-modal').style.display = 'none';
+                    updateUIForUser();
+                    loadOrders();
+                } else {
+                    document.getElementById('auth-modal').style.display = 'flex';
+                }
+            }
+
+            function toggleAuth(isLogin) {
+                document.getElementById('login-section').style.display = isLogin ? 'block' : 'none';
+                document.getElementById('register-section').style.display = isLogin ? 'none' : 'block';
+                document.getElementById('auth-title').innerText = isLogin ? 'Admin Access' : 'Create Admin Profile';
+            }
+
+            async function login() {
+                const user = {
+                    username: document.getElementById('username').value,
+                    password: document.getElementById('password').value
+                };
+                const res = await fetch('/api/auth/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(user)
+                });
+                if (res.ok) {
+                    const data = await res.json();
+                    currentUser = data.user || data;
+                    localStorage.setItem('admin_user', JSON.stringify(currentUser));
+                    document.getElementById('auth-modal').style.display = 'none';
+                    updateUIForUser();
+                    loadOrders();
+                } else {
+                    alert("Invalid admin credentials");
+                }
+            }
+
+            async function register() {
+                const user = {
+                    fullName: document.getElementById('reg-name').value,
+                    username: document.getElementById('reg-user').value,
+                    email: document.getElementById('reg-email').value,
+                    password: document.getElementById('reg-pass').value,
+                    role: 'ADMIN'
+                };
+                const res = await fetch('/api/auth/register', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(user)
+                });
+                if (res.ok) {
+                    alert("Admin account created! Please login.");
+                    toggleAuth(true);
+                } else {
+                    alert("Registration failed");
+                }
+            }
+
+            function logout() {
+                if (confirm("Logout from admin panel?")) {
+                    localStorage.removeItem('admin_user');
+                    location.reload();
+                }
+            }
+
+            function updateUIForUser() {
+                if (!currentUser) return;
+                document.getElementById('prof-name').value = currentUser.fullName || '';
+                document.getElementById('prof-user').value = currentUser.username || '';
+                document.getElementById('prof-email').value = currentUser.email || '';
+                document.getElementById('prof-phone').value = currentUser.phone || '';
+                document.getElementById('prof-address').value = currentUser.address || '';
+            }
+
+            async function updateAdminProfile() {
+                const payload = {
+                    username: currentUser.username,
+                    fullName: document.getElementById('prof-name').value,
+                    email: document.getElementById('prof-email').value,
+                    phone: document.getElementById('prof-phone').value,
+                    address: document.getElementById('prof-address').value
+                };
+                const res = await fetch('/api/users/profile', {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                if (res.ok) {
+                    const updated = await res.json();
+                    currentUser = updated;
+                    localStorage.setItem('admin_user', JSON.stringify(currentUser));
+                    alert("Admin profile updated!");
+                    updateUIForUser();
+                }
+            }
+
+            async function loadConfig() {
+                const res = await fetch('/api/config/vpa');
+                const data = await res.json();
+                document.getElementById('admin-vpa-disp').innerText = data.vpa;
+            }
+
+            function switchTab(tabId, el) {
+                document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active-tab'));
+                document.querySelectorAll('.sidebar-menu li').forEach(l => l.classList.remove('active'));
+                document.getElementById(tabId + '-tab').classList.add('active-tab');
+                el.classList.add('active');
+                document.getElementById('tab-title').innerText = tabId.charAt(0).toUpperCase() + tabId.slice(1) + " Management";
+
+                const actionHeader = document.getElementById('action-header');
+                actionHeader.innerHTML = "";
+                if (tabId === 'products') {
+                    actionHeader.innerHTML = `<button class="btn btn-primary" onclick="showProductModal()">+ Add Product</button>`;
+                    loadProducts();
+                } else if (tabId === 'users') {
+                    loadUsers();
+                } else if (tabId === 'feedback') {
+                    loadFeedback();
+                } else if (tabId === 'activity') {
+                    loadActivity();
+                } else if (tabId === 'profile') {
+                    updateUIForUser();
+                } else {
+                    loadOrders();
+                }
+            }
+
+            async function loadActivity() {
+                const res = await fetch('/api/activity');
+                if (res.ok) {
+                    const activities = await res.json();
+                    const table = document.getElementById('activity-table');
+                    table.innerHTML = "";
+                    activities.forEach(activity => {
+                        const tr = document.createElement('tr');
+                        tr.id = `row-act-${activity.username}`;
+                        tr.innerHTML = `
+                            <td>${activity.timestamp}</td>
+                            <td><strong>@${activity.username}</strong></td>
+                            <td><span class="status-pill" style="background:var(--primary); color:white">${activity.action}</span></td>
+                            <td style="font-size:0.8rem">${activity.details}</td>
+                        `;
+                        table.appendChild(tr);
+                    });
+                }
+            }
+
+            async function loadOrders() {
+                const res = await fetch('/api/orders');
+                const orders = await res.json();
+
+                let revenue = 0;
+                let active = 0;
+                let done = 0;
+                let canceled = 0;
+
+                document.getElementById('order-table').innerHTML = orders.reverse().map(o => {
+                    if (o.paymentStatus === 'PAID') revenue += o.totalAmount;
+                    if (o.status === 'DELIVERED') done++;
+                    else if (o.status === 'CANCELLED') canceled++;
+                    else active++;
+
+                    return `
+                <tr>
+                    <td style="font-weight:700">#${o.orderId}</td>
+                    <td>${o.customerName}<br><small style="color:var(--text-muted)">${o.phone}</small></td>
+                    <td style="font-size: 0.8rem; color: var(--text-muted)">${o.productSummary}</td>
+                    <td style="font-weight:800">₹${o.totalAmount.toFixed(2)}</td>
+                    <td>
+                        <span class="status-pill" style="background:${o.paymentStatus === 'PAID' ? 'rgba(16,185,129,0.1)' : 'rgba(239,68,68,0.1)'}; color:${o.paymentStatus === 'PAID' ? '#10b981' : '#ef4444'}">
+                            ${o.paymentStatus || 'PENDING'}
+                        </span>
+                        ${o.transactionId ? `<br><small style="font-family:monospace">${o.transactionId}</small>` : ''}
+                    </td>
+                    <td><span class="status-pill status-${o.status}">${o.status}</span></td>
+                    <td>
+                        <select onchange="updateStatus('${o.orderId}', this.value)" style="background:var(--bg); border:none; color:white; padding:5px; border-radius:5px">
+                            <option value="">Update...</option>
+                            <option value="PROCESSING">Process</option>
+                            <option value="SHIPPED">Ship</option>
+                            <option value="DELIVERED">Deliver</option>
+                            <option value="CANCELLED">Cancel</option>
+                        </select>
+                        ${o.paymentStatus === 'PAID' ? `<button class="btn btn-red" style="padding:5px 10px; font-size:10px; margin-left:5px" onclick="refundTransaction('${o.transactionId}')">Refund</button>` : ''}
+                    </td>
+                </tr>
+            `}).join('');
+
+                document.getElementById('stat-revenue').innerText = "₹" + revenue.toFixed(0);
+                document.getElementById('stat-orders').innerText = active;
+                document.getElementById('stat-done').innerText = done;
+                document.getElementById('stat-bad').innerText = canceled;
+            }
+
+            async function loadProducts() {
+                const res = await fetch('/api/products');
+                const prods = await res.json();
+                document.getElementById('product-table').innerHTML = prods.map(p => `
+                <tr>
+                    <td><img src="${p.imageUrl}" style="width:40px; height:40px; border-radius:10px; object-fit:cover"></td>
+                    <td><strong>${p.name}</strong></td>
+                    <td>${p.category}</td>
+                    <td>₹${p.price.toFixed(2)}</td>
+                    <td>${p.isOnSale ? `<span style="color:var(--secondary); font-weight:800">₹${p.discountPrice.toFixed(2)}</span>` : '-'}</td>
+                    <td><span class="status-pill status-DELIVERED">Active</span></td>
+                    <td><button class="btn btn-red" onclick="deleteProduct(${p.id})">Delete</button></td>
+                </tr>
+            `).join('');
+            }
+
+            async function loadUsers() {
+                const res = await fetch('/api/users');
+                const users = await res.json();
+                document.getElementById('user-table').innerHTML = users.map(u => `
+                <tr>
+                    <td><strong>${u.fullName}</strong></td>
+                    <td>@${u.username}</td>
+                    <td>${u.email}</td>
+                    <td>${u.phone || '-'}</td>
+                    <td><span class="status-pill" style="background:#6366f1; color:white">${u.role}</span></td>
+                </tr>
+            `).join('');
+            }
+
+            async function loadFeedback() {
+                const res = await fetch('/api/feedbacks');
+                const feeds = await res.json();
+                document.getElementById('feedback-table').innerHTML = feeds.reverse().map(f => `
+                <tr>
+                    <td style="color:#fbbf24; font-weight:800">${f.rating} ★</td>
+                    <td>@${f.username}</td>
+                    <td style="font-size:0.85rem">${f.content}</td>
+                    <td style="color:var(--text-muted)">${new Date(f.createdAt).toLocaleDateString()}</td>
+                    <td><button class="btn btn-red" onclick="deleteFeedback(${f.id})">Delete</button></td>
+                </tr>
+            `).join('');
+            }
+
+            async function updateStatus(id, newStatus) {
+                if (!newStatus) return;
+                await fetch(`/api/orders/${id}/status?status=${newStatus}`, { method: 'PUT' });
+                loadOrders();
+            }
+
+            async function refundTransaction(txnId) {
+                const reason = prompt("Enter Refund Reason:");
+                if (!reason) return;
+                const refundUTR = prompt("Step 1: Send money via UPI manually.\nStep 2: Enter the Refund UTR here:");
+                if (!refundUTR) return;
+
+                const res = await fetch(`/api/transactions/${txnId}/refund?reason=${encodeURIComponent(reason)}&refundTxnId=${encodeURIComponent(refundUTR)}`, { method: 'POST' });
+                if (res.ok) { alert("Refund Recorded!"); loadOrders(); }
+            }
+
+            function showProductModal() { document.getElementById('product-modal').style.display = 'flex'; }
+            function closeModals() { document.querySelectorAll('.modal').forEach(m => m.style.display = 'none'); }
+
+            async function saveProduct() {
+                const product = {
+                    name: document.getElementById('prod-name').value,
+                    category: document.getElementById('prod-cat').value,
+                    price: document.getElementById('prod-price').value,
+                    discountPrice: document.getElementById('prod-discount').value,
+                    isOnSale: document.getElementById('prod-onsale').checked,
+                    imageUrl: document.getElementById('prod-img').value,
+                    description: document.getElementById('prod-desc').value
+                };
+                await fetch('/api/products', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(product)
+                });
+                closeModals();
+                loadProducts();
+            }
+
+            async function deleteProduct(id) {
+                if (confirm("Delete product?")) {
+                    await fetch(`/api/products/${id}`, { method: 'DELETE' });
+                    loadProducts();
+                }
+            }
+
+            async function deleteFeedback(id) {
+                if (confirm("Delete feedback?")) {
+                    await fetch(`/api/feedbacks/${id}`, { method: 'DELETE' });
+                    loadFeedback();
+                }
+            }
+
+            function initWebSocket() {
+                const socket = new SockJS('/ws');
+                stompClient = Stomp.over(socket);
+                stompClient.debug = null;
+                stompClient.connect({}, () => {
+                    console.log("Admin WebSocket connected");
+
+                    // Real-time Order Updates
+                    stompClient.subscribe('/topic/orders', () => {
+                        console.log("New order received - updating list");
+                        loadOrders();
+                    });
+
+                    // Live Activity Tracking
+                    stompClient.subscribe('/topic/admin/activity', (msg) => {
+                        const activity = JSON.parse(msg.body);
+                        updateLiveActivity(activity);
+                    });
+                });
+            }
+
+            function updateLiveActivity(activity) {
+                const container = document.getElementById('live-updates');
+                const card = document.getElementById('live-activity-card');
+                card.style.display = 'block';
+
+                if (container.innerText.includes("Waiting")) container.innerHTML = "";
+
+                // Check for existing user activity in the small card
+                let userDiv = document.getElementById(`live-act-${activity.username}`);
+                if (!userDiv) {
+                    userDiv = document.createElement('div');
+                    userDiv.id = `live-act-${activity.username}`;
+                    userDiv.style.padding = "8px";
+                    userDiv.style.background = "rgba(255,255,255,0.03)";
+                    userDiv.style.borderRadius = "8px";
+                    userDiv.style.borderLeft = "3px solid var(--primary)";
+                    container.prepend(userDiv);
+                }
+
+                userDiv.innerHTML = `
+                    <div style="display:flex; justify-content:space-between">
+                        <span style="font-weight:700">@${activity.username}</span>
+                        <small style="color:var(--text-muted)">${activity.timestamp}</small>
+                    </div>
+                    <div style="font-size:0.8rem">${activity.action}: ${activity.details}</div>
+                `;
+
+                // Also update activity table if tab is active
+                const table = document.getElementById('activity-table');
+                if (table) {
+                    let userRow = document.getElementById(`row-act-${activity.username}`);
+                    if (!userRow) {
+                        userRow = document.createElement('tr');
+                        userRow.id = `row-act-${activity.username}`;
+                        table.prepend(userRow);
+                    }
+                    userRow.innerHTML = `
+                        <td>${activity.timestamp}</td>
+                        <td><strong>@${activity.username}</strong></td>
+                        <td><span class="status-pill" style="background:var(--primary); color:white">${activity.action}</span></td>
+                        <td style="font-size:0.8rem">${activity.details}</td>
+                    `;
+                }
+            }
+
+            init();
+        </script>
+</body>
+
+</html>
